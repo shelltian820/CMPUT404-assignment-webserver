@@ -60,14 +60,15 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 #directory, go to index
                 mimetype = 'text/html'
                 path += 'index.html'
-                header = 'HTTP/1.1 301 Permanently Moved\n'
+                # header = 'HTTP/1.1 301 Permanently Moved\n'
+                header = 'HTTP/1.1 200 OK\n'
             else:
                 #directory, go to index
                 #redirect?
                 mimetype = 'text/html'
                 path += '/index.html'
-                # path += '/'
                 header = 'HTTP/1.1 301 Permanently Moved\n'
+                # header = 'HTTP/1.1 200 OK\n'
             
             header += 'Content-Type: '+str(mimetype)+'\n\n'
 
