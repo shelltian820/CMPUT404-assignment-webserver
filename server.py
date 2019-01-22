@@ -1,5 +1,7 @@
 #  coding: utf-8 
 import socketserver
+import os
+from pathlib import Path
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -26,11 +28,17 @@ import socketserver
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
-def read_path(data):
-    begin = data.find(bytes('/', 'utf-8'))
-    end =  data.find(bytearray('HTTP/1.1', 'utf-8'))
-    #print('begin = ' + str(begin) + 'end = ' + str(end))
-    return begin, end
+RESPONSE_404 = """<html>
+                    <body>
+                    <center>
+                        <h3>Error 404: File not found</h3>
+                        <p>Python HTTP Server</p>
+                    </center>
+                    </body>
+                </html>""".encode('utf-8')
+STATUS_404 = 'HTTP/1.1 404 Not Found\n\n'.encode('utf-8')
+STATUS_301 = 'HTTP/1.1 301 Permanently Moved\n'.encode('utf-8')
+STATUS_200 = 'HTTP/1.1 200 OK\n'.encode('utf-8')
     
 class MyWebServer(socketserver.BaseRequestHandler):
     
@@ -41,55 +49,55 @@ class MyWebServer(socketserver.BaseRequestHandler):
         
         string_list = self.data.split(' ')
         method = string_list[0]
-        path = string_list[1].split('?')[0]
+        path = './www' + string_list[1].split('?')[0]
         print("method = " + method)
         print ("path = " + path)
+        
+        base_directory = os.getcwd() + "/www"
+        print('base dir', base_directory)
+        print('realpath', os.path.abspath(path))
+        if (os.path.realpath(path).startswith(base_directory) == False):
+            header = STATUS_404
+            response = RESPONSE_404
+            print('Access Denied!')
+            self.request.sendall(header+response)
+            return 
 
-        # path = path.lstrip('/')
-           
+        if(path.endswith('.css')):
+            #css file
+            mimetype = 'text/css'
+            header = STATUS_200
+        elif(path.endswith('.html')):
+            #html file
+            mimetype = 'text/html'
+            header = STATUS_200
+        elif(path.endswith('/')): 
+            #directory, go to index
+            mimetype = 'text/html'
+            path += 'index.html'
+            header = STATUS_200
+        else:
+            #directory, go to index
+            #redirect?
+            mimetype = 'text/html'
+            path += '/index.html'
+            header = STATUS_301   
+
+        header += ('Content-Type: '+str(mimetype)+'\n\n').encode('utf-8')
+
+
         try:            
-            if(path.endswith('.css')):
-                #css file
-                mimetype = 'text/css'
-                header = 'HTTP/1.1 200 OK\n'
-            elif(path.endswith('.html')):
-                #html file
-                mimetype = 'text/html'
-                header = 'HTTP/1.1 200 OK\n'
-            elif(path.endswith('/')): 
-                #directory, go to index
-                mimetype = 'text/html'
-                path += 'index.html'
-                # header = 'HTTP/1.1 301 Permanently Moved\n'
-                header = 'HTTP/1.1 200 OK\n'
-            else:
-                #directory, go to index
-                #redirect?
-                mimetype = 'text/html'
-                path += '/index.html'
-                header = 'HTTP/1.1 301 Permanently Moved\n'
-                # header = 'HTTP/1.1 200 OK\n'
-            
-            header += 'Content-Type: '+str(mimetype)+'\n\n'
-
-            print('opening ./www' + path)
-            file = open('./www' + path, 'rb')
+            print('opening ' + path)
+            file = open(path, 'rb')
             response = file.read()
             file.close()
             
         except Exception as e:  
-            header = 'HTTP/1.1 404 Not Found\n\n'
-            response = """<html>
-                          <body>
-                            <center>
-                             <h3>Error 404: File not found</h3>
-                             <p>Python HTTP Server</p>
-                            </center>
-                          </body>
-                        </html>""".encode('utf-8')
+            print('exception!!!')
+            header = STATUS_404
+            response = RESPONSE_404
         
-        self.request.sendall(header.encode('utf-8')+response)
-        #self.request.close()
+        self.request.sendall(header+response)
         
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
