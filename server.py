@@ -37,14 +37,7 @@ RESPONSE_404 = """<html>
                 </html>""".encode('utf-8')
 STATUS_404 = 'HTTP/1.1 404 Not Found\n\n'.encode('utf-8')
 
-RESPONSE_405 = """<html>
-                    <body>
-                    <center>
-                        <h3>Error 405: Method not allowed</h3>
-                        <p>Python HTTP Server</p>
-                    </center>
-                    </body>
-                </html>""".encode('utf-8')
+RESPONSE_405 = 'Method not allowed'.encode('utf-8')
 STATUS_405 = 'HTTP/1.1 405 Method Not Allowed\n\n'.encode('utf-8')
 
 RESPONSE_301 = """<html>
@@ -75,7 +68,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
         #make sure only GET method is used
         if (method != 'GET'):
             header = STATUS_405
-            header += ('Content-Type: '+str(mimetype)+'\n\n').encode('utf-8')
             response = RESPONSE_405
             print('Method Not Allowed!\n')
             self.request.sendall(header+response)
@@ -84,8 +76,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
         #make sure only files in ./www are served
         #referenced from https://security.openstack.org/guidelines/dg_using-file-paths.html
         base_directory = os.getcwd() + "/www"
-        print('base dir = ', base_directory)
-        print('realpath = ', os.path.abspath(path))
+        # print('base dir = ', base_directory)
+        print('abspath = ', os.path.abspath(path))
+        print('realpath = ', os.path.realpath(path))
         if (os.path.realpath(path).startswith(base_directory) == False):
             mimetype = 'text/html'
             header = STATUS_404
