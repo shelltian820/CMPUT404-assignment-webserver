@@ -2,7 +2,7 @@
 import socketserver
 import os
 
-# Copyright 2013 Abram Hindle, Eddie Antonio Santos
+# Copyright 2013 Abram Hindle, Eddie Antonio Santos, Shelley Tian
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -88,6 +88,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.request.sendall(header+response)
             return 
 
+        #parse path
         if(path.endswith('.css')):
             #css file
             mimetype = 'text/css'
@@ -117,7 +118,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
         header += ('Content-Type: '+str(mimetype)+'\n\n').encode('utf-8')
 
-
+        #try to open file
         try:            
             print('opening ' + path + '\n')
             file = open(path, 'rb')
