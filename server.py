@@ -1,7 +1,6 @@
 #  coding: utf-8 
 import socketserver
 import os
-from pathlib import Path
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -37,29 +36,62 @@ RESPONSE_404 = """<html>
                     </body>
                 </html>""".encode('utf-8')
 STATUS_404 = 'HTTP/1.1 404 Not Found\n\n'.encode('utf-8')
+
+RESPONSE_405 = """<html>
+                    <body>
+                    <center>
+                        <h3>Error 405: Method not allowed</h3>
+                        <p>Python HTTP Server</p>
+                    </center>
+                    </body>
+                </html>""".encode('utf-8')
+STATUS_405 = 'HTTP/1.1 405 Method Not Allowed\n\n'.encode('utf-8')
+
+RESPONSE_301 = """<html>
+                    <body>
+                    <center>
+                        <h3>Error 301: Page permanently moved</h3>
+                        <p>Python HTTP Server</p>
+                    </center>
+                    </body>
+                </html>""".encode('utf-8')
 STATUS_301 = 'HTTP/1.1 301 Permanently Moved\n'.encode('utf-8')
 STATUS_200 = 'HTTP/1.1 200 OK\n'.encode('utf-8')
     
 class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
-        #self.data = self.request.recv(1024).strip()
         self.data = self.request.recv(1024).decode('utf-8')
-        print ("Got a request of: %s\n" % self.data)
-        
+        # print ("Got a request of: %s\n" % self.data)
+
+        #parse data
+        #referenced from https://emalsha.wordpress.com/2016/11/24/how-create-http-server-using-python-socket-part-ii/
         string_list = self.data.split(' ')
         method = string_list[0]
         path = './www' + string_list[1].split('?')[0]
         print("method = " + method)
         print ("path = " + path)
         
+        #make sure only GET method is used
+        if (method != 'GET'):
+            header = STATUS_405
+            header += ('Content-Type: '+str(mimetype)+'\n\n').encode('utf-8')
+            response = RESPONSE_405
+            print('Method Not Allowed!\n')
+            self.request.sendall(header+response)
+            return 
+
+        #make sure only files in ./www are served
+        #referenced from https://security.openstack.org/guidelines/dg_using-file-paths.html
         base_directory = os.getcwd() + "/www"
-        print('base dir', base_directory)
-        print('realpath', os.path.abspath(path))
+        print('base dir = ', base_directory)
+        print('realpath = ', os.path.abspath(path))
         if (os.path.realpath(path).startswith(base_directory) == False):
+            mimetype = 'text/html'
             header = STATUS_404
+            header += ('Content-Type: '+str(mimetype)+'\n\n').encode('utf-8')
             response = RESPONSE_404
-            print('Access Denied!')
+            print('Access Denied!\n')
             self.request.sendall(header+response)
             return 
 
@@ -76,24 +108,31 @@ class MyWebServer(socketserver.BaseRequestHandler):
             mimetype = 'text/html'
             path += 'index.html'
             header = STATUS_200
-        else:
-            #directory, go to index
-            #redirect?
+        elif (os.path.isdir(path)):
+            #directory without slash, go to 301 page
             mimetype = 'text/html'
-            path += '/index.html'
-            header = STATUS_301   
+            header = STATUS_301  
+            header += ('Content-Type: '+str(mimetype)+'\n\n').encode('utf-8')
+            response = RESPONSE_301 
+            print('Page Moved!')
+            self.request.sendall(header+response)
+            return
+        else:
+            mimetype = 'text/html'
+            header = STATUS_404
+            response = RESPONSE_404
 
         header += ('Content-Type: '+str(mimetype)+'\n\n').encode('utf-8')
 
 
         try:            
-            print('opening ' + path)
+            print('opening ' + path + '\n')
             file = open(path, 'rb')
             response = file.read()
             file.close()
             
         except Exception as e:  
-            print('exception!!!')
+            # print('exception!!!')
             header = STATUS_404
             response = RESPONSE_404
         
